@@ -10,6 +10,71 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../fonctions'))
 
 import fonctions_standard as f
+from datetime import datetime
+import pytz
+import numpy as np
+
+def maj_valeur_actuelle(supabase):
+    # Obtenir la date actuelle
+    paris_tz = pytz.timezone("Europe/Paris")
+    now = datetime.now(paris_tz).isoformat()
+
+    # 1. Récupérer tous les contrats actifs
+    contrats = supabase.table("Contrat") \
+        .select("id_contrat") \
+        .is_("END", None) \
+        .execute()
+
+    if not contrats.data:
+        print("❌ Aucun contrat actif trouvé.")
+        return
+
+    for contrat in contrats.data:
+        id_contrat = contrat["id_contrat"]
+
+        # 2. Récupérer les performances liées à ce contrat
+        perf_res = supabase.table("Performance") \
+            .select("PER, id_match") \
+            .eq("id_contrat", id_contrat) \
+            .execute()
+
+        if not perf_res.data:
+            print(f"ℹ️ Aucune performance pour contrat {id_contrat}")
+            continue
+
+        # 3. Ajouter la date de chaque match
+        performances = []
+        for p in perf_res.data:
+            match_res = supabase.table("Match") \
+                .select("date") \
+                .eq("id_match", p["id_match"]) \
+                .execute()
+            if match_res.data:
+                performances.append({
+                    "PER": p["PER"],
+                    "date": match_res.data[0]["date"]
+                })
+
+        if len(performances) == 0:
+            continue
+
+        # 4. Trier par date décroissante et prendre les 4 derniers
+        performances.sort(key=lambda x: x["date"], reverse=True)
+        derniers_PER = [p["PER"] for p in performances[:4]]
+        moyenne = round(np.mean(derniers_PER), 2)
+
+        # 5. Insérer dans Valeur_Actuelle
+        insert_res = supabase.table("Valeur_Actuelle").insert({
+            "id_contrat": id_contrat,
+            "valeur": moyenne,
+            "date": now
+        }).execute()
+
+        if insert_res.data:
+            print(f"✅ Valeur ajoutée pour contrat {id_contrat} → {moyenne}")
+        else:
+            print(f"❌ Échec insertion pour contrat {id_contrat}")
+
 
 def ajouter_user(supabase,pseudo: str, mot_de_passe: str, adresse_mail: str = ""):
     # 1. Hasher le mot de passe
@@ -271,14 +336,15 @@ def get_update_match_data(supabase, season):
     gs = GameStats()
 
     # 🔹 Récupération des matchs déjà présents dans la base de données
-    match_ids_season = f.get_match_ids_par_saison(supabase, season)
+    match_ids_season = get_match_ids_par_saison(supabase, season)
     
     # 🔹 Récupération des matchs non présents dans la base de données
     not_yet = list(set([i for i in range(1,334)]) - set(match_ids_season))
     
 
-    match_ids_season = f.get_match_ids_par_saison(supabase, season)
+    match_ids_season = get_match_ids_par_saison(supabase, season)
     not_yet = list(set([i for i in range(1,334)]) - set(match_ids_season))
+    ok_one_time = False
     for game_code in not_yet:
         print(f"\n🔄 Traitement du match {game_code}...")
         try:
@@ -303,11 +369,11 @@ def get_update_match_data(supabase, season):
             nom_road = ggs['road.club.name'].to_list()[0]
 
             # 🔹 Ajout des équipes
-            f.ajouter_equipe(supabase, id_equipe_local, nom_local)
-            f.ajouter_equipe(supabase, id_equipe_road, nom_road)
+            ajouter_equipe(supabase, id_equipe_local, nom_local)
+            ajouter_equipe(supabase, id_equipe_road, nom_road)
 
             # 🔹 Ajout du match
-            f.ajouter_match(
+            ajouter_match(
                 supabase, game_code, season,
                 id_equipe_local, id_equipe_road,
                 ggs['local.score'].to_list()[0],
@@ -328,17 +394,19 @@ def get_update_match_data(supabase, season):
                 perf = row["Valuation"]
 
                 try:
-                    f.ajouter_joueur_si_absent(supabase, id_joueur, nom, prenom)
-                    f.verifier_ou_ajouter_contrat(supabase, id_joueur, equipe, date)
-                    id_contrat = f.recuperer_id_contrat(supabase, id_joueur, equipe)
+                    ajouter_joueur_si_absent(supabase, id_joueur, nom, prenom)
+                    verifier_ou_ajouter_contrat(supabase, id_joueur, equipe, date)
+                    id_contrat = recuperer_id_contrat(supabase, id_joueur, equipe)
                     if id_contrat:
-                        f.ajouter_performance(supabase, season, game_code, id_contrat, perf)
+                        ajouter_performance(supabase, season, game_code, id_contrat, perf)
                     else:
                         print(f"⚠️ Aucun contrat actif pour {id_joueur} → {equipe}")
                 except Exception as e:
                     print(f"❌ Erreur pour le joueur {id_joueur} ({nom} {prenom}) : {e}")
                     continue
-
+            ok_one_time = True
         except Exception as e:
             print(f"\n❌ Erreur dans game_code {game_code} → {e}")
             continue
+    if ok_one_time:
+        maj_valeur_actuelle(supabase)
