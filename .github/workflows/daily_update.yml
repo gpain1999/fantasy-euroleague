@@ -2,8 +2,8 @@ name: Daily Supabase Update
 
 on:
   schedule:
-    - cron : '0 20 * * *'
-    - cron : '0 21 * * *'  
+    - cron: '0 20 * * *'
+    - cron: '0 21 * * *'  
     - cron: '0 22 * * *'  
     - cron: '0 23 * * *'  
   workflow_dispatch:      # Permet de le lancer manuellement aussi
