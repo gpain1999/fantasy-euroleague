@@ -14,15 +14,16 @@ from datetime import datetime
 import pytz
 import numpy as np
 
-def maj_valeur_actuelle(supabase):
+def maj_valeur_actuelle(supabase,id_update):
     # Obtenir la date actuelle
     paris_tz = pytz.timezone("Europe/Paris")
     now = datetime.now(paris_tz).isoformat()
 
-    # 1. Récupérer tous les contrats actifs
+    # 1. Récupérer tous les contrats actifs + id_player dans id_update
     contrats = supabase.table("Contrat") \
-        .select("id_contrat") \
+        .select("id_contrat, id_joueur") \
         .is_("END", None) \
+        .in_("id_joueur", id_update) \
         .execute()
 
     if not contrats.data:
@@ -344,12 +345,16 @@ def get_update_match_data(supabase, season):
 
     match_ids_season = get_match_ids_par_saison(supabase, season)
     not_yet = list(set([i for i in range(1,334)]) - set(match_ids_season))
-    ok_one_time = False
+    id_update = []
     for game_code in not_yet:
         print(f"\n🔄 Traitement du match {game_code}...")
         try:
             # 🔹 Récupération des données du match
             ggs = gs.get_game_report(season=season, game_code=game_code)
+            if ggs['local.score'].to_list()[0] == 0 and ggs['road.score'].to_list()[0] == 0:
+                print(f"⚠️ Match {game_code} non joué, pas de données disponibles.")
+                continue
+
             boxscore = bs.get_player_boxscore_stats_data(season=season, gamecode=game_code)
             
             # 🔹 Formatage de la date
@@ -361,6 +366,8 @@ def get_update_match_data(supabase, season):
                 (boxscore["Player_ID"] != "Team") &
                 (boxscore["Player_ID"] != "Total")
             ][["Player_ID", "Player", "Team", "Valuation"]].reset_index(drop=True)
+
+            id_update = list(set(boxscore["Player_ID"].to_list() + id_update))
 
             # 🔹 Équipes
             id_equipe_local = ggs['local.club.code'].to_list()[0]
@@ -408,5 +415,5 @@ def get_update_match_data(supabase, season):
         except Exception as e:
             print(f"\n❌ Erreur dans game_code {game_code} → {e}")
             continue
-    if ok_one_time:
-        maj_valeur_actuelle(supabase)
+    if id_update:
+        maj_valeur_actuelle(supabase,id_update)
