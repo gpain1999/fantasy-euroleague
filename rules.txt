@@ -20,7 +20,20 @@ Tu as suffisamment d’argent sur ton solde.
 
 Tu peux vendre un joueur à tout moment entre deux rounds.
 
-La vente d’un joueur te rapporte sa valeur actuelle, calculée comme la moyenne de ses 4 derniers PER.
+La vente d’un joueur te rapporte sa valeur actuelle.
+
+📈 Valeur des joueurs
+La valeur d’un joueur est déterminée par la moyenne de ses 4 dernières performances (PER), sur les matchs qu’il a effectivement joués (hors DNP ou absences).
+
+🔁 Cette valeur est mise à jour automatiquement à la fin de chaque match.
+
+🧮 Règles de calcul :
+Si un joueur a joué moins de 4 matchs, la moyenne est faite sur les matchs disponibles.
+
+Si un PER est négatif, il est ramené à 0 avant d’être inclus dans le calcul.
+
+💸 Usage :
+Cette valeur est utilisée à la fois pour l’achat et pour la revente du joueur.
 
 🕑 Fréquence des transferts
 Les changements d’équipe sont autorisés uniquement entre les rounds (entre deux journées de match).
@@ -37,4 +50,4 @@ Tu peux consulter les équipes des autres joueurs.
 Leur solde en banque reste privé.
 
 ⚙️ Mises à jour automatiques
-Les données (PER, résultats, valeurs…) sont automatiquement mises à jour chaque nuit grâce à un système automatisé (GitHub Actions).
+Les données (PER, résultats, valeurs…) sont automatiquement mises à jour chaque nuit.
