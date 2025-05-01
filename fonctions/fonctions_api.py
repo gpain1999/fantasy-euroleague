@@ -1,11 +1,12 @@
 from datetime import datetime
 import pytz
 from supabase import create_client
-
+from euroleague_api.game_stats import GameStats
+from euroleague_api.boxscore_data  import BoxScoreData
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../fonctions'))
 
 import fonctions_standard as f
@@ -261,3 +262,83 @@ def get_match_ids_par_saison(supabase, saison: int = 2024):
     else:
         print(f"ℹ️ Aucun match trouvé pour la saison {saison}")
         return []
+    
+def get_update_match_data(supabase, season):
+    """
+    Récupère les données de match à mettre à jour.
+    """
+    bs = BoxScoreData()
+    gs = GameStats()
+
+    # 🔹 Récupération des matchs déjà présents dans la base de données
+    match_ids_season = f.get_match_ids_par_saison(supabase, season)
+    
+    # 🔹 Récupération des matchs non présents dans la base de données
+    not_yet = list(set([i for i in range(1,334)]) - set(match_ids_season))
+    
+
+    match_ids_season = f.get_match_ids_par_saison(supabase, season)
+    not_yet = list(set([i for i in range(1,334)]) - set(match_ids_season))
+    for game_code in not_yet:
+        print(f"\n🔄 Traitement du match {game_code}...")
+        try:
+            # 🔹 Récupération des données du match
+            ggs = gs.get_game_report(season=season, game_code=game_code)
+            boxscore = bs.get_player_boxscore_stats_data(season=season, gamecode=game_code)
+            
+            # 🔹 Formatage de la date
+            date = ggs["date"].to_list()[0]
+            
+            # 🔹 Nettoyage du boxscore
+            boxscore = boxscore[
+                (boxscore['Minutes'] != "DNP") &
+                (boxscore["Player_ID"] != "Team") &
+                (boxscore["Player_ID"] != "Total")
+            ][["Player_ID", "Player", "Team", "Valuation"]].reset_index(drop=True)
+
+            # 🔹 Équipes
+            id_equipe_local = ggs['local.club.code'].to_list()[0]
+            nom_local = ggs['local.club.name'].to_list()[0]
+            id_equipe_road = ggs['road.club.code'].to_list()[0]
+            nom_road = ggs['road.club.name'].to_list()[0]
+
+            # 🔹 Ajout des équipes
+            f.ajouter_equipe(supabase, id_equipe_local, nom_local)
+            f.ajouter_equipe(supabase, id_equipe_road, nom_road)
+
+            # 🔹 Ajout du match
+            f.ajouter_match(
+                supabase, game_code, season,
+                id_equipe_local, id_equipe_road,
+                ggs['local.score'].to_list()[0],
+                ggs['road.score'].to_list()[0],
+                date
+            )
+
+            # 🔹 Traitement de chaque joueur
+            for _, row in boxscore.iterrows():
+                id_joueur = row["Player_ID"]
+                equipe = row["Team"]
+                try:
+                    nom, prenom = row["Player"].split(", ")
+                except ValueError:
+                    print(f"❌ Format incorrect pour Player : {row['Player']} → ignoré")
+                    continue
+
+                perf = row["Valuation"]
+
+                try:
+                    f.ajouter_joueur_si_absent(supabase, id_joueur, nom, prenom)
+                    f.verifier_ou_ajouter_contrat(supabase, id_joueur, equipe, date)
+                    id_contrat = f.recuperer_id_contrat(supabase, id_joueur, equipe)
+                    if id_contrat:
+                        f.ajouter_performance(supabase, season, game_code, id_contrat, perf)
+                    else:
+                        print(f"⚠️ Aucun contrat actif pour {id_joueur} → {equipe}")
+                except Exception as e:
+                    print(f"❌ Erreur pour le joueur {id_joueur} ({nom} {prenom}) : {e}")
+                    continue
+
+        except Exception as e:
+            print(f"\n❌ Erreur dans game_code {game_code} → {e}")
+            continue
