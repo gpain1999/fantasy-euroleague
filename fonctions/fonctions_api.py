@@ -18,6 +18,15 @@ import numpy as np
 from datetime import datetime
 import pytz
 
+def get_nombre_joueurs_actifs(supabase, id_user: int) -> int:
+    res = supabase.table("Possession") \
+        .select("id_possession", count="exact") \
+        .eq("id_user", id_user) \
+        .is_("END", None) \
+        .execute()
+
+    return res.count or 0
+
 def acheter_joueur(supabase, id_user: int, id_contrat: int):
     paris_tz = pytz.timezone("Europe/Paris")
     now = datetime.now(paris_tz).isoformat()
@@ -38,11 +47,7 @@ def acheter_joueur(supabase, id_user: int, id_contrat: int):
         raise Exception("⛔ Ce joueur est déjà dans ton équipe.")
 
     # 3. Vérifier qu’il y a moins de 10 joueurs actifs dans l’équipe
-    team_count = supabase.table("Possession") \
-        .select("id_possession", count="exact") \
-        .eq("id_user", id_user) \
-        .is_("END", None) \
-        .execute()
+    team_count = get_nombre_joueurs_actifs(supabase, id_user)
 
     if team_count.count >= 10:
         raise Exception("⛔ Tu as déjà 10 joueurs dans ton équipe.")
@@ -496,7 +501,25 @@ def ajouter_match_calendrier(supabase, id_match: int, season: int, round_: int,
         paris = pytz.timezone("Europe/Paris")
         date_str = datetime.now(paris).isoformat()
 
-    # Insertion
+    # 🔍 Vérification d'existence
+    existing = supabase.table("Calendrier") \
+        .select("id_match") \
+        .eq("id_match", id_match) \
+        .eq("season", season) \
+        .eq("round", round_) \
+        .execute()
+
+    if existing.data:
+        # 🔄 Supprimer l'existant
+        supabase.table("Calendrier") \
+            .delete() \
+            .eq("id_match", id_match) \
+            .eq("season", season) \
+            .eq("round", round_) \
+            .execute()
+        print(f"🔁 Ancien match supprimé pour id_match={id_match}, round={round_}")
+
+    # ✅ Insertion
     result = supabase.table("Calendrier").insert({
         "id_match": id_match,
         "season": season,
