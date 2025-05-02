@@ -247,7 +247,7 @@ def verifier_ou_ajouter_contrat(supabase, id_joueur: str, id_equipe: str, date_d
         print(f"ℹ️ Contrat actif déjà en place pour {id_joueur} → {id_equipe}")
 
 
-def ajouter_match(supabase, game_code: int, season: int, id_equipe_1: str, id_equipe_2: str, 
+def ajouter_match(supabase, game_code: int, season: int,round : int, id_equipe_1: str, id_equipe_2: str, 
                   score_1: int, score_2: int, date_match: str = None):
     id_equipe_1 = id_equipe_1.upper()
     id_equipe_2 = id_equipe_2.upper()
@@ -260,6 +260,7 @@ def ajouter_match(supabase, game_code: int, season: int, id_equipe_1: str, id_eq
         .select("id_match") \
         .eq("id_match", game_code) \
         .eq("season", season) \
+       .eq("round", round) \               
         .execute()
 
     if res.data:
@@ -380,6 +381,7 @@ def get_update_match_data(supabase, season):
             nom_local = ggs['local.club.name'].to_list()[0]
             id_equipe_road = ggs['road.club.code'].to_list()[0]
             nom_road = ggs['road.club.name'].to_list()[0]
+            round = gss['round'].to_list()[0]
 
             # 🔹 Ajout des équipes
             ajouter_equipe(supabase, id_equipe_local, nom_local)
@@ -387,7 +389,7 @@ def get_update_match_data(supabase, season):
 
             # 🔹 Ajout du match
             ajouter_match(
-                supabase, game_code, season,
+                supabase, game_code, season,round,
                 id_equipe_local, id_equipe_road,
                 ggs['local.score'].to_list()[0],
                 ggs['road.score'].to_list()[0],
