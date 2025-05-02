@@ -31,7 +31,7 @@ def acheter_joueur(supabase, id_user: int, id_contrat: int):
     paris_tz = pytz.timezone("Europe/Paris")
     now = datetime.now(paris_tz).isoformat()
 
-    # 1. Vérifier si c’est bien une période ACTIVE (donc is_inactive_period == False)
+    # 1. Vérifier si c’est bien une période ACTIVE (donc is_active_period == True)
     if is_active_period(supabase) == False:
         raise Exception("⛔ Achat impossible : la période de transfert est actuellement fermée.")
 
@@ -49,7 +49,7 @@ def acheter_joueur(supabase, id_user: int, id_contrat: int):
     # 3. Vérifier qu’il y a moins de 10 joueurs actifs dans l’équipe
     team_count = get_nombre_joueurs_actifs(supabase, id_user)
 
-    if team_count.count >= 10:
+    if team_count >= 10:
         raise Exception("⛔ Tu as déjà 10 joueurs dans ton équipe.")
 
     # 4. Trouver la valeur actuelle du joueur (la plus récente)
