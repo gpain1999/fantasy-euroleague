@@ -40,7 +40,7 @@ Les changements d’équipe sont autorisés uniquement entre les rounds (entre d
 Il est impossible de modifier ton équipe en cours de round.
 
 📊 Classement
-Le classement est mis à jour automatiquement à la fin de chaque round.
+Le classement est mis à jour automatiquement à la fin de chaque journée.
 
 Il est visible par tous les participants.
 

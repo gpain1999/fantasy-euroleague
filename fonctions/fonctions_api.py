@@ -5,6 +5,7 @@ from euroleague_api.game_stats import GameStats
 from euroleague_api.boxscore_data  import BoxScoreData
 import sys
 import os
+import re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../fonctions'))
@@ -13,6 +14,131 @@ import fonctions_standard as f
 from datetime import datetime
 import pytz
 import numpy as np
+
+from datetime import datetime
+import pytz
+
+def acheter_joueur(supabase, id_user: int, id_contrat: int):
+    paris_tz = pytz.timezone("Europe/Paris")
+    now = datetime.now(paris_tz).isoformat()
+
+    # 1. Vérifier si c’est bien une période ACTIVE (donc is_inactive_period == False)
+    if is_active_period(supabase) == False:
+        raise Exception("⛔ Achat impossible : la période de transfert est actuellement fermée.")
+
+    # 2. Vérifier si le joueur est déjà dans l’équipe (possession active)
+    possession_check = supabase.table("Possession") \
+        .select("id_possession") \
+        .eq("id_user", id_user) \
+        .eq("id_contrat", id_contrat) \
+        .is_("END", None) \
+        .execute()
+
+    if possession_check.data:
+        raise Exception("⛔ Ce joueur est déjà dans ton équipe.")
+
+    # 3. Vérifier qu’il y a moins de 10 joueurs actifs dans l’équipe
+    team_count = supabase.table("Possession") \
+        .select("id_possession", count="exact") \
+        .eq("id_user", id_user) \
+        .is_("END", None) \
+        .execute()
+
+    if team_count.count >= 10:
+        raise Exception("⛔ Tu as déjà 10 joueurs dans ton équipe.")
+
+    # 4. Trouver la valeur actuelle du joueur (la plus récente)
+    valeur_res = supabase.table("Valeur_Actuelle") \
+        .select("valeur, date") \
+        .eq("id_contrat", id_contrat) \
+        .order("date", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if not valeur_res.data:
+        raise Exception("❌ Aucune valeur actuelle trouvée pour ce joueur.")
+
+    prix = valeur_res.data[0]["valeur"]
+
+    # 5. Vérifier le solde bancaire de l'utilisateur
+    banque_res = supabase.table("Banque") \
+        .select("solde, datetime") \
+        .eq("id_user", id_user) \
+        .order("datetime", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if not banque_res.data:
+        raise Exception("❌ Impossible de récupérer le solde bancaire.")
+
+    solde_actuel = banque_res.data[0]["solde"]
+
+    if solde_actuel < prix:
+        raise Exception(f"⛔ Achat refusé : tu as {solde_actuel} crédits, il t’en faut {prix}.")
+
+    # 6. Créer la Possession
+    supabase.table("Possession").insert({
+        "id_user": id_user,
+        "id_contrat": id_contrat,
+        "START": now,
+        "END": None
+    }).execute()
+
+    # 7. Mettre à jour le solde dans Banque
+    nouveau_solde = round(solde_actuel - prix, 2)
+
+    supabase.table("Banque").insert({
+        "id_user": id_user,
+        "datetime": now,
+        "solde": nouveau_solde
+    }).execute()
+
+    # 8. Ajouter une ligne dans Transaction
+    supabase.table("Transaction").insert({
+        "id_user": id_user,
+        "id_contrat": id_contrat,
+        "type_transaction": True,  # Achat
+        "datetime": now,
+        "prix": prix
+    }).execute()
+
+    print(f"✅ Achat effectué : joueur {id_contrat} pour {prix} crédits. Nouveau solde : {nouveau_solde}")
+
+
+def is_active_period(supabase) -> bool:
+    # Obtenir l'heure actuelle en timezone Paris
+    paris = pytz.timezone("Europe/Paris")
+    now = datetime.now(paris).isoformat()
+
+    # Cherche une deadline active maintenant
+    res = supabase.table("Deadline") \
+        .select("START, END") \
+        .lte("START", now) \
+        .gte("END", now) \
+        .execute()
+
+    # Si une ligne correspond, on est en période INACTIVE
+    if res.data:
+        return False
+    return True
+
+def add_deadline(supabase, start: str, end: str):
+    """
+    Ajoute une période de deadline dans la table Deadline.
+
+    Paramètres :
+    - start : str → timestamp ISO 8601 (ex: '2025-01-03T00:00:00')
+    - end   : str → timestamp ISO 8601 (ex: '2025-01-05T20:00:00')
+    """
+    result = supabase.table("Deadline").insert({
+        "START": start,
+        "END": end
+    }).execute()
+
+    if result.data:
+        print(f"✅ Deadline ajoutée : {start} → {end}")
+    else:
+        print("❌ Erreur lors de l'ajout de la deadline")
 
 def maj_valeur_actuelle(supabase,id_update):
     # Obtenir la date actuelle
@@ -78,8 +204,26 @@ def maj_valeur_actuelle(supabase,id_update):
 
 
 def ajouter_user(supabase, pseudo: str, mot_de_passe: str, adresse_mail: str = ""):
+    # 0. Vérifier que l'email est valide (si fourni)
+    if adresse_mail:
+        regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        if not re.match(regex, adresse_mail):
+            raise ValueError("L’adresse mail fournie n’est pas valide.")
+
+        # Vérifier si le mail est déjà utilisé
+        existing_mail_response = supabase.table("User") \
+            .select("adresse_mail") \
+            .eq("adresse_mail", adresse_mail) \
+            .execute()
+
+        if existing_mail_response.data:
+            raise Exception("Cette adresse mail est déjà utilisée.")
+
     # 1. Vérifier si le pseudo est déjà utilisé
-    existing_user_response = supabase.table("User").select("pseudo").eq("pseudo", pseudo).execute()
+    existing_user_response = supabase.table("User") \
+        .select("pseudo") \
+        .eq("pseudo", pseudo) \
+        .execute()
 
     if existing_user_response.data:
         raise Exception("Le pseudo est déjà utilisé, veuillez en choisir un autre.")
@@ -91,7 +235,7 @@ def ajouter_user(supabase, pseudo: str, mot_de_passe: str, adresse_mail: str = "
     user_response = supabase.table("User").insert({
         "pseudo": pseudo,
         "mot_de_passe": mot_de_passe_hash,
-        "adresse_mail": adresse_mail  # si ce champ existe
+        "adresse_mail": adresse_mail
     }).execute()
 
     if not user_response.data:
@@ -110,7 +254,7 @@ def ajouter_user(supabase, pseudo: str, mot_de_passe: str, adresse_mail: str = "
         "solde": 110.0
     }).execute()
 
-    print(f"Utilisateur {pseudo} ajouté avec id {id_user} et solde initial 110")
+    print(f"✅ Utilisateur {pseudo} ajouté avec id {id_user} et solde initial 110")
 
 def ajouter_equipe(supabase, id_equipe: str, nom: str):
     # Vérifier que l'ID est bien 3 lettres
@@ -336,7 +480,63 @@ def get_match_ids_par_saison(supabase, saison: int = 2024):
     else:
         print(f"ℹ️ Aucun match trouvé pour la saison {saison}")
         return []
-    
+
+def ajouter_match_calendrier(supabase, id_match: int, season: int, round_: int,
+                             id_equipe1: str, id_equipe2: str, date_str: str = None):
+    # Vérifier que les deux équipes sont différentes
+    if id_equipe1.upper() == id_equipe2.upper():
+        raise ValueError("Les deux équipes doivent être différentes.")
+
+    # Formatage des ID
+    id_equipe1 = id_equipe1.upper()
+    id_equipe2 = id_equipe2.upper()
+
+    # Date par défaut = maintenant (heure de Paris)
+    if not date_str:
+        paris = pytz.timezone("Europe/Paris")
+        date_str = datetime.now(paris).isoformat()
+
+    # Insertion
+    result = supabase.table("Calendrier").insert({
+        "id_match": id_match,
+        "season": season,
+        "round": round_,
+        "id_equipe1": id_equipe1,
+        "id_equipe2": id_equipe2,
+        "date": date_str
+    }).execute()
+
+    if result.data:
+        print(f"✅ Match ajouté au calendrier : {id_equipe1} vs {id_equipe2} (Round {round_})")
+    else:
+        print("❌ Échec de l’ajout au calendrier.")
+
+def nettoyer_calendrier(supabase):
+    # 1. Récupérer tous les triplets (id_match, season, round) de Match
+    matchs = supabase.table("Match") \
+        .select("id_match, season, round") \
+        .execute()
+
+    if not matchs.data:
+        print("❌ Aucun match trouvé dans Match.")
+        return
+
+    # 2. Pour chaque triplet, supprimer s’il existe dans Calendrier
+    for match in matchs.data:
+        id_match = match["id_match"]
+        season = match["season"]
+        round_ = match["round"]
+
+        # Supprimer dans Calendrier si le même triplet existe
+        supabase.table("Calendrier") \
+            .delete() \
+            .eq("id_match", id_match) \
+            .eq("season", season) \
+            .eq("round", round_) \
+            .execute()
+
+    print("✅ Calendrier nettoyé : doublons supprimés par correspondance avec Match.")
+
 def get_update_match_data(supabase, season):
     """
     Récupère les données de match à mettre à jour.
@@ -359,14 +559,33 @@ def get_update_match_data(supabase, season):
         try:
             # 🔹 Récupération des données du match
             ggs = gs.get_game_report(season=season, game_code=game_code)
-            if ggs['local.score'].to_list()[0] == 0 and ggs['road.score'].to_list()[0] == 0:
+            # 🔹 Équipes
+            id_equipe_local = ggs['local.club.code'].to_list()[0]
+            nom_local = ggs['local.club.name'].to_list()[0]
+            id_equipe_road = ggs['road.club.code'].to_list()[0]
+            nom_road = ggs['road.club.name'].to_list()[0]
+            round = ggs['Round'].to_list()[0]
+            score_local = ggs['local.score'].to_list()[0]
+            score_road = ggs['road.score'].to_list()[0]
+            date = ggs["date"].to_list()[0]
+
+            if score_local == 0 and score_road == 0:
+                ajouter_match_calendrier(
+                                supabase,
+                                id_match=game_code,
+                                season=season,
+                                round_=round,
+                                id_equipe1=id_equipe_local,
+                                id_equipe2=id_equipe_road,
+                                date_str=date
+                            )
                 print(f"⚠️ Match {game_code} non joué, pas de données disponibles.")
                 continue
 
             boxscore = bs.get_player_boxscore_stats_data(season=season, gamecode=game_code)
             
             # 🔹 Formatage de la date
-            date = ggs["date"].to_list()[0]
+            
             
             # 🔹 Nettoyage du boxscore
             boxscore = boxscore[
@@ -377,12 +596,7 @@ def get_update_match_data(supabase, season):
 
             id_update = list(set(boxscore["Player_ID"].to_list() + id_update))
 
-            # 🔹 Équipes
-            id_equipe_local = ggs['local.club.code'].to_list()[0]
-            nom_local = ggs['local.club.name'].to_list()[0]
-            id_equipe_road = ggs['road.club.code'].to_list()[0]
-            nom_road = ggs['road.club.name'].to_list()[0]
-            round = gss['round'].to_list()[0]
+
 
             # 🔹 Ajout des équipes
             ajouter_equipe(supabase, id_equipe_local, nom_local)
@@ -392,8 +606,8 @@ def get_update_match_data(supabase, season):
             ajouter_match(
                 supabase, game_code, season,round,
                 id_equipe_local, id_equipe_road,
-                ggs['local.score'].to_list()[0],
-                ggs['road.score'].to_list()[0],
+                score_local,
+                score_road,
                 date
             )
 
@@ -426,3 +640,5 @@ def get_update_match_data(supabase, season):
             continue
     if id_update:
         maj_valeur_actuelle(supabase,id_update)
+    
+    nettoyer_calendrier(supabase)
