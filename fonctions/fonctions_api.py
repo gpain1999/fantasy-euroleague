@@ -62,7 +62,7 @@ def maj_valeur_actuelle(supabase,id_update):
         # 4. Trier par date décroissante et prendre les 4 derniers
         performances.sort(key=lambda x: x["date"], reverse=True)
         derniers_PER = [p["PER"] for p in performances[:4]]
-        moyenne = round(max(np.mean(derniers_PER),0), 2)
+        moyenne = round(max(np.mean(derniers_PER),0)*4)/4
 
         # 5. Insérer dans Valeur_Actuelle
         insert_res = supabase.table("Valeur_Actuelle").insert({
