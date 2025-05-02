@@ -260,8 +260,9 @@ def ajouter_match(supabase, game_code: int, season: int,round : int, id_equipe_1
         .select("id_match") \
         .eq("id_match", game_code) \
         .eq("season", season) \
-       .eq("round", round) \               
+        .eq("round", round) \
         .execute()
+
 
     if res.data:
         print(f"ℹ️ Match déjà existant : saison {season}, match {game_code}")
