@@ -27,6 +27,79 @@ def get_nombre_joueurs_actifs(supabase, id_user: int) -> int:
 
     return res.count or 0
 
+def vendre_joueur(supabase, id_user: int, id_contrat: int):
+    paris_tz = pytz.timezone("Europe/Paris")
+    now = datetime.now(paris_tz).isoformat()
+
+    # 1. Vérifier si c’est bien une période ACTIVE
+    if is_active_period(supabase) == False:
+        raise Exception("⛔ Vente impossible : la période de transfert est fermée.")
+
+    # 2. Vérifier que le joueur est bien possédé actuellement
+    possession_res = supabase.table("Possession") \
+        .select("id_possession") \
+        .eq("id_user", id_user) \
+        .eq("id_contrat", id_contrat) \
+        .is_("END", None) \
+        .execute()
+
+    if not possession_res.data:
+        raise Exception("⛔ Tu ne possèdes pas ce joueur.")
+
+    id_possession = possession_res.data[0]["id_possession"]
+
+    # 3. Mettre fin à la possession (END = now)
+    supabase.table("Possession") \
+        .update({"END": now}) \
+        .eq("id_possession", id_possession) \
+        .execute()
+
+    # 4. Récupérer la valeur actuelle du joueur (la plus récente)
+    valeur_res = supabase.table("Valeur_Actuelle") \
+        .select("valeur, date") \
+        .eq("id_contrat", id_contrat) \
+        .order("date", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if not valeur_res.data:
+        raise Exception("❌ Aucune valeur actuelle trouvée pour ce joueur.")
+
+    prix = valeur_res.data[0]["valeur"]
+
+    # 5. Récupérer le solde bancaire actuel
+    banque_res = supabase.table("Banque") \
+        .select("solde, datetime") \
+        .eq("id_user", id_user) \
+        .order("datetime", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if not banque_res.data:
+        raise Exception("❌ Impossible de récupérer le solde bancaire.")
+
+    solde_actuel = banque_res.data[0]["solde"]
+    nouveau_solde = round(solde_actuel + prix, 2)
+
+    # 6. Ajouter le nouveau solde en Banque
+    supabase.table("Banque").insert({
+        "id_user": id_user,
+        "datetime": now,
+        "solde": nouveau_solde
+    }).execute()
+
+    # 7. Ajouter une ligne dans Transaction (type = False = vente)
+    supabase.table("Transaction").insert({
+        "id_user": id_user,
+        "id_contrat": id_contrat,
+        "type_transaction": False,  # Vente
+        "datetime": now,
+        "prix": prix
+    }).execute()
+
+    print(f"✅ Vente effectuée : joueur {id_contrat} vendu {prix} crédits. Nouveau solde : {nouveau_solde}")
+
+
 def acheter_joueur(supabase, id_user: int, id_contrat: int):
     paris_tz = pytz.timezone("Europe/Paris")
     now = datetime.now(paris_tz).isoformat()
