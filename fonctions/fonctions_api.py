@@ -555,24 +555,54 @@ def ajouter_match(supabase, game_code: int, season: int,round : int, id_equipe_1
     else:
         print("❌ Échec de l’ajout du match.")
 
-def ajouter_performance(supabase, season: int, id_match: int, id_contrat: int, per: int):
-    # Corriger un PER négatif à 0
+
+def ajouter_performance(supabase, season: int, id_match: int, id_contrat: int, per: int, date: str = None):
+    # 0. Date = maintenant (heure de Paris) si non fournie
+    if not date:
+        paris_tz = pytz.timezone("Europe/Paris")
+        date = datetime.now(paris_tz).isoformat()
+
+    # 1. Corriger un PER négatif
     if per < 0:
         print(f"⚠️ PER négatif détecté pour contrat {id_contrat}, ajusté à 0.")
         per = 0
 
-    # Insertion de la performance
-    result = supabase.table("Performance").insert({
+    # 2. Ajouter la performance
+    insert_res = supabase.table("Performance").insert({
         "season": season,
         "id_match": id_match,
         "id_contrat": id_contrat,
         "PER": per
     }).execute()
 
-    if result.data:
-        print(f"✅ Performance ajoutée : contrat {id_contrat}, match {id_match}, PER = {per}")
-    else:
-        print("❌ Échec de l’ajout de la performance.")
+    if not insert_res.data:
+        raise Exception("❌ Échec de l’ajout de la performance.")
+
+    id_performance = insert_res.data[0]["id_performance"]
+    print(f"✅ Performance ajoutée : id {id_performance}, contrat {id_contrat}, PER = {per}")
+
+    # 3. Trouver les utilisateurs qui possédaient ce joueur à ce moment-là
+    possession_res = supabase.table("Possession") \
+        .select("id_user") \
+        .eq("id_contrat", id_contrat) \
+        .lte("START", date) \
+        .or_(f"END.gte.{date},END.is.null") \
+        .execute()
+
+    if not possession_res.data:
+        print("ℹ️ Aucun utilisateur ne possédait ce joueur à cette date.")
+        return id_performance
+
+    # 4. Insérer dans Perf_User
+    for row in possession_res.data:
+        id_user = row["id_user"]
+        supabase.table("Perf_User").insert({
+            "id_performance": id_performance,
+            "id_user": id_user
+        }).execute()
+        print(f"➕ Ajout de la performance {id_performance} pour user {id_user} dans Perf_User")
+
+    return id_performance
 
 def recuperer_id_contrat(supabase, id_joueur: str, id_equipe: str) -> int | None:
     id_equipe = id_equipe.upper()
@@ -769,7 +799,7 @@ def get_update_match_data(supabase, season):
                     verifier_ou_ajouter_contrat(supabase, id_joueur, equipe, date)
                     id_contrat = recuperer_id_contrat(supabase, id_joueur, equipe)
                     if id_contrat:
-                        ajouter_performance(supabase, season, game_code, id_contrat, perf)
+                        ajouter_performance(supabase, season, game_code, id_contrat, perf,date)
                     else:
                         print(f"⚠️ Aucun contrat actif pour {id_joueur} → {equipe}")
                 except Exception as e:
