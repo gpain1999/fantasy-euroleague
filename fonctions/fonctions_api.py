@@ -428,7 +428,31 @@ def ajouter_contrat(supabase, id_joueur: str, id_equipe: str, date_debut: str = 
     else:
         print("❌ Échec de l’ajout du contrat.")
 
-def finir_contrat(supabase,id_joueur: str, id_equipe: str):
+def finir_contrats_equipe(supabase, id_equipe: str):
+    id_equipe = id_equipe.upper()
+
+    # Récupérer tous les contrats actifs (END = NULL) de cette équipe
+    contrats = supabase.table("Contrat") \
+        .select("id_joueur") \
+        .eq("id_equipe", id_equipe) \
+        .is_("END", None) \
+        .execute()
+
+    if not contrats.data:
+        print(f"ℹ️ Aucun contrat actif trouvé pour l’équipe {id_equipe}.")
+        return
+
+    # Boucle sur tous les joueurs concernés
+    for contrat in contrats.data:
+        id_joueur = contrat["id_joueur"]
+        try:
+            finir_contrat(supabase, id_joueur, id_equipe)
+        except Exception as e:
+            print(f"⚠️ Erreur sur {id_joueur} ({id_equipe}) : {e}")
+
+    print(f"✅ Tous les contrats actifs de l’équipe {id_equipe} ont été clôturés.")
+
+def finir_contrat(supabase, id_joueur: str, id_equipe: str):
     id_equipe = id_equipe.upper()
     paris_tz = pytz.timezone("Europe/Paris")
     now = datetime.now(paris_tz).isoformat()
@@ -443,13 +467,33 @@ def finir_contrat(supabase,id_joueur: str, id_equipe: str):
 
     if res.data:
         id_contrat = res.data[0]["id_contrat"]
+
+        # 1. Clôturer le contrat dans Contrat
         supabase.table("Contrat") \
             .update({"END": now}) \
             .eq("id_contrat", id_contrat) \
             .execute()
         print(f"✅ Contrat {id_contrat} terminé pour joueur {id_joueur} avec {id_equipe} à {now}")
+
+        # 2. Chercher les utilisateurs possédant ce contrat encore actif
+        possessions = supabase.table("Possession") \
+            .select("id_user") \
+            .eq("id_contrat", id_contrat) \
+            .is_("END", None) \
+            .execute()
+
+        if possessions.data:
+            for poss in possessions.data:
+                id_user = poss["id_user"]
+                try:
+                    vendre_joueur(supabase, id_user, id_contrat)
+                except Exception as e:
+                    print(f"⚠️ Erreur lors de la vente auto pour user {id_user} : {e}")
+        else:
+            print("ℹ️ Aucun utilisateur ne possédait ce joueur.")
     else:
         print(f"ℹ️ Aucun contrat actif trouvé pour joueur {id_joueur} et équipe {id_equipe}")
+
 
 
 def verifier_ou_ajouter_contrat(supabase, id_joueur: str, id_equipe: str, date_debut: str = None):
