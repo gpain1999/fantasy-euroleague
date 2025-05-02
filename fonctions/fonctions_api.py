@@ -77,11 +77,17 @@ def maj_valeur_actuelle(supabase,id_update):
             print(f"❌ Échec insertion pour contrat {id_contrat}")
 
 
-def ajouter_user(supabase,pseudo: str, mot_de_passe: str, adresse_mail: str = ""):
-    # 1. Hasher le mot de passe
+def ajouter_user(supabase, pseudo: str, mot_de_passe: str, adresse_mail: str = ""):
+    # 1. Vérifier si le pseudo est déjà utilisé
+    existing_user_response = supabase.table("User").select("pseudo").eq("pseudo", pseudo).execute()
+
+    if existing_user_response.data:
+        raise Exception("Le pseudo est déjà utilisé, veuillez en choisir un autre.")
+
+    # 2. Hasher le mot de passe
     mot_de_passe_hash = f.hash_password(mot_de_passe)
 
-    # 2. Ajouter dans la table User
+    # 3. Ajouter dans la table User
     user_response = supabase.table("User").insert({
         "pseudo": pseudo,
         "mot_de_passe": mot_de_passe_hash,
@@ -91,10 +97,10 @@ def ajouter_user(supabase,pseudo: str, mot_de_passe: str, adresse_mail: str = ""
     if not user_response.data:
         raise Exception("Erreur lors de l'ajout de l'utilisateur")
 
-    # 3. Récupérer l'id_user généré
+    # 4. Récupérer l'id_user généré
     id_user = user_response.data[0]["id_user"]
 
-    # 4. Ajouter une entrée dans Banque
+    # 5. Ajouter une entrée dans Banque
     paris_tz = pytz.timezone("Europe/Paris")
     now = datetime.now(paris_tz).isoformat()
 
