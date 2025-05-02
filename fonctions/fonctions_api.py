@@ -699,13 +699,14 @@ def get_update_match_data(supabase, season):
             ajouter_equipe(supabase, id_equipe_road, nom_road)
 
             # 🔹 Ajout du match
-            ajouter_match(
-                supabase, game_code, season,round,
-                id_equipe_local, id_equipe_road,
-                score_local,
-                score_road,
-                date
-            )
+            if round :
+                ajouter_match(
+                    supabase, game_code, season,round,
+                    id_equipe_local, id_equipe_road,
+                    score_local,
+                    score_road,
+                    date
+                )
 
             # 🔹 Traitement de chaque joueur
             for _, row in boxscore.iterrows():
