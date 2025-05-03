@@ -29,27 +29,27 @@ def afficher_effectif(supabase, effectif, action_active=True):
     cols = st.columns([2, 2, 2, 2, 2, 2, 2,2, 1])
     cols[0].markdown("**Joueur**")
     cols[1].markdown("**Équipe**")
-    cols[2].markdown("**Valeur actuelle**")
-    cols[3].markdown("**Date d’achat**")
-    cols[4].markdown("**Prix d’achat**")
-    cols[5].markdown("**Dernier match**")
-    cols[6].markdown("**Dernier PER**")
-    cols[7].markdown("**PER N-4**")
+    cols[2].markdown("**Date d’achat**")
+    cols[3].markdown("**Prix d’achat**")
+    cols[4].markdown("**Dernier match**")
+    cols[5].markdown("**Dernier PER**")
+    cols[6].markdown("**PER N-4**")
+    cols[7].markdown("**Prix actuel**")
     cols[8].markdown("**Action**")
 
     for joueur in effectif:
         cols = st.columns([2, 2, 2, 2, 2, 2, 2,2, 1])
         cols[0].markdown(joueur["Joueur"])
         cols[1].markdown(joueur["Équipe"])
-        cols[2].markdown(str(joueur["Valeur actuelle"]))
-        cols[3].markdown(f"{str(joueur['Date d’achat'])[:10]} {str(joueur['Date d’achat'])[11:16]}")
-        cols[4].markdown(str(joueur["Prix d’achat"]))
-        cols[5].markdown(str(joueur["Dernier match"])[:10])
-        cols[6].markdown(str(joueur["Dernier PER"]))
-        cols[7].markdown(str(joueur["PER_4"]))
+        cols[2].markdown(f"{str(joueur['Date d’achat'])[:10]} {str(joueur['Date d’achat'])[11:16]}")
+        cols[3].markdown(str(joueur["Prix d’achat"]))
+        cols[4].markdown(str(joueur["Dernier match"])[:10])
+        cols[5].markdown(str(joueur["Dernier PER"]))
+        cols[6].markdown(str(joueur["PER_4"]))
+        cols[7].markdown(str(joueur["Valeur actuelle"]))
 
         if action_active:
-            if cols[8].button("Vendre", key=f"vendre_{joueur['id_contrat']}"):
+            if cols[8].button(f"Vendre", key=f"vendre_{joueur['id_contrat']}"):
                 f.vendre_joueur(supabase, st.session_state.id_user, joueur["id_contrat"])
                 st.rerun()
         else:
@@ -101,20 +101,21 @@ def afficher_tableau(supabase,joueurs, action_label="Acheter", action_active=Tru
     cols = st.columns([2, 2, 2, 2, 2,2, 1])
     cols[0].markdown("**Joueur**")
     cols[1].markdown("**Équipe**")
-    cols[2].markdown("**Valeur**")
-    cols[3].markdown("**Dernier match**")
-    cols[4].markdown("**Dernier PER**")
-    cols[5].markdown("**PER N-4**")
+    cols[2].markdown("**Dernier match**")
+    cols[3].markdown("**Dernier PER**")
+    cols[4].markdown("**PER N-4**")
+    cols[5].markdown("**Prix actuel**")
     cols[6].markdown("**Action**")
 
     for joueur in joueurs:
         cols = st.columns([2, 2, 2, 2, 2,2, 1])
         cols[0].markdown(str(joueur["Joueur"]))
         cols[1].markdown(str(joueur["Équipe"]))
-        cols[2].markdown(str(f"{joueur['Valeur actuelle']:.2f}"))
-        cols[3].markdown(str(joueur["Dernier match"])[:10])
-        cols[4].markdown(str(joueur["Dernier PER"]))
-        cols[5].markdown(str(joueur["PER_4"]))
+        cols[2].markdown(str(joueur["Dernier match"])[:10])
+        cols[3].markdown(str(joueur["Dernier PER"]))
+        cols[4].markdown(str(joueur["PER_4"]))
+        cols[5].markdown(str(f"{joueur['Valeur actuelle']:.2f}"))
+
         if action_active:
             if cols[6].button(action_label, key=f"acheter_{joueur['id_contrat']}"):
                 try:

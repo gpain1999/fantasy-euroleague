@@ -3,6 +3,8 @@ import fonctions.fonctions_standard as fs
 import fonctions.fonctions_tableaux as ft
 import fonctions.fonctions_streamlit as fst
 import fonctions.fonctions_api as f
+from datetime import datetime
+import pytz
 
 def regles_du_jeu() :
     st.title("📜 Règles du Fantasy Euroleague")
@@ -38,19 +40,87 @@ def se_connecter(supabase) :
             else:
                 st.error("❌ Mauvais identifiants.")
 
+
+
+def prochain_match(supabase):
+    ROUND_LABELS = {
+        35: "Play-in",
+        36: "Play-in",
+        37: "Playoffs Game 1",
+        38: "Playoffs Game 2",
+        39: "Playoffs Game 3",
+        40: "Playoffs Game 4",
+        41: "Playoffs Game 5",
+        42: "Final 4 - Demi-finale",
+        43: "Match pour la 3e place",
+        44: "Finale"
+    }
+
+    st.title("📅 Prochains matchs")
+    fst.barre_grise()
+
+    paris_tz = pytz.timezone("Europe/Paris")
+    now = datetime.now(paris_tz).isoformat()
+
+    # Récupérer les matchs à venir
+    matchs = supabase.table("Calendrier") \
+        .select("season, round, id_equipe1, id_equipe2, date") \
+        .gte("date", now) \
+        .order("date", desc=False) \
+        .execute()
+
+    if not matchs.data:
+        st.info("Aucun match à venir trouvé.")
+        fst.barre_grise()
+        return
+
+    for match in matchs.data:
+        id_eq1 = match["id_equipe1"]
+        id_eq2 = match["id_equipe2"]
+
+        # Récupérer les noms des équipes
+        nom_eq1 = supabase.table("Equipe").select("nom").eq("id_equipe", id_eq1).execute().data
+        nom_eq2 = supabase.table("Equipe").select("nom").eq("id_equipe", id_eq2).execute().data
+
+        nom_eq1 = nom_eq1[0]["nom"] if nom_eq1 else id_eq1
+        nom_eq2 = nom_eq2[0]["nom"] if nom_eq2 else id_eq2
+
+        try:
+            dt = datetime.fromisoformat(match["date"]).astimezone(paris_tz)
+            formatted_date = dt.strftime("%A %d %B %Y à %Hh%M")
+        except:
+            formatted_date = match["date"][:16]
+
+        label_round = ROUND_LABELS.get(match["round"], f"Round {match['round']}")
+        st.markdown(f"""
+        ### 🏀 {nom_eq1} vs {nom_eq2}
+        - **{label_round}**
+        - **Saison** : {match['season']} / {match['season']+1}
+        - **Date** : {formatted_date}
+        """)
+        st.markdown("---")
+
+    fst.barre_grise()
+
+
+
+
 def marketplace(supabase) :
     st.title("🛒 Marketplace")
+    fst.barre_grise()
     solde_user = ft.afficher_solde_actuel(supabase, st.session_state.id_user)
     effectif = ft.afficher_effectif(supabase, st.session_state.id_user)
     nb_joueurs = len(effectif)
     effectif = sorted(effectif, key=lambda x: x["Valeur actuelle"], reverse=True)
+    
     joueurs_disponibles = ft.afficher_joueurs_disponibles(supabase, st.session_state.id_user)
     joueurs_achetables, joueurs_non_achetables = fs.separer_joueurs_par_disponibilite(
         joueurs_disponibles, solde_user, nb_joueurs
     )
-    col0,col1, col2, col3 = st.columns([1,3, 1, 1])
+    col0,col1,col2, col3, col4 = st.columns([1,3,1, 1, 1])
     with col0:
-        st.metric(label="Utilisateur", value=st.session_state.pseudo)
+        st.metric(label="👤 Utilisateur", value=st.session_state.pseudo)
+
     with col1:
         date_deadline, active_time = f.find_deadline(supabase)
 
@@ -63,6 +133,9 @@ def marketplace(supabase) :
         st.metric(label="💰 Solde actuel", value=f"{solde_user:.2f}")
 
     with col3:
+        st.metric(label="💎 Valeur de l'effectif", value=f"{sum([v['Valeur actuelle'] for v in effectif]):.2f}")
+
+    with col4:
         st.metric(label="👥 Joueurs dans ton effectif", value=f"{nb_joueurs}/10")
     fst.barre_grise()
     st.subheader("🧑‍🤝‍🧑 Ton effectif")
