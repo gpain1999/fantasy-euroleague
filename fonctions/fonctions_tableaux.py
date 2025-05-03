@@ -58,11 +58,47 @@ def afficher_effectif(supabase, id_user: int):
     contrats_possedes = [p["id_contrat"] for p in possession_res.data]
 
     # 2. Récupérer les infos depuis vue_tableau_recap
-    perf_res = supabase.table("vue_tableau_recap") \
+    perf_res1 = supabase.table("vue_tableau_recap") \
         .select("id_contrat, date, PER, nom, prenom, nom_equipe") \
         .in_("id_contrat", contrats_possedes) \
         .eq("rang", 1) \
         .execute()
+    
+
+    perf_res4 = supabase.table("vue_tableau_recap") \
+        .select("id_contrat, PER") \
+        .in_("id_contrat", contrats_possedes) \
+        .eq("rang", 4) \
+        .execute()
+    # Indexé par id_contrat pour jointure rapide
+    perf1_dict = {}
+    for row in perf_res1.data:
+        perf1_dict[row["id_contrat"]] = {
+            "PER_1": row["PER"],
+            "Dernier match": row["date"],
+            "Joueur": f"{row['prenom']} {row['nom']}",
+            "Équipe": row["nom_equipe"]
+        }
+
+    perf4_dict = {}
+    for row in perf_res4.data:
+        perf4_dict[row["id_contrat"]] = {
+            "PER_4": row["PER"]
+        }
+
+    perf_res = []
+
+    for id_contrat in contrats_possedes:
+        if id_contrat not in perf1_dict:
+            continue  # ignore si pas de match récent
+
+        row = {
+            "id_contrat": id_contrat,
+            **perf1_dict[id_contrat],
+            **perf4_dict.get(id_contrat, {"PER_4": "-"})  # si pas de PER_4
+        }
+
+        perf_res.append(row)
 
     # 3. Récupérer les valeurs actuelles
     valeurs_res = supabase.table("Valeur_Actuelle") \
@@ -97,17 +133,18 @@ def afficher_effectif(supabase, id_user: int):
 
     # 5. Construire le tableau final
     effectif = []
-    for row in perf_res.data:
+    for row in perf_res:
         id_contrat = row["id_contrat"]
         effectif.append({
             "id_contrat": id_contrat,
-            "Joueur": f"{row['prenom']} {row['nom']}",
-            "Équipe": row["nom_equipe"],
+            "Joueur": f"{row['Joueur']}",
+            "Équipe": row["Équipe"],
             "Valeur actuelle": valeurs_dict.get(id_contrat, "?"),
             "Prix d’achat": prix_dict.get(id_contrat, "?"),
             "Date d’achat": date_achats.get(id_contrat, "?"),
-            "Dernier match": row["date"],
-            "Dernier PER": row["PER"]
+            "Dernier match": row["Dernier match"],
+            "Dernier PER": row["PER_1"],
+            "PER_4": row["PER_4"]
         })
 
     return effectif
@@ -138,16 +175,54 @@ def afficher_joueurs_disponibles(supabase, id_user: int):
         for contrat in contrats_actifs_res.data
         if contrat["id_contrat"] not in contrats_possedes
     ]
-
-    perf_res = supabase.table("vue_tableau_recap") \
-        .select("id_contrat, date, PER, nom,prenom,nom_equipe") \
+    # 2. Récupérer les infos depuis vue_tableau_recap
+    perf_res1 = supabase.table("vue_tableau_recap") \
+        .select("id_contrat, date, PER, nom, prenom, nom_equipe") \
         .in_("id_contrat", contrats_disponibles) \
         .eq("rang", 1) \
         .execute()
+    
+
+    perf_res4 = supabase.table("vue_tableau_recap") \
+        .select("id_contrat, PER") \
+        .in_("id_contrat", contrats_disponibles) \
+        .eq("rang", 4) \
+        .execute()
+    # Indexé par id_contrat pour jointure rapide
+    perf1_dict = {}
+    for row in perf_res1.data:
+        perf1_dict[row["id_contrat"]] = {
+            "PER_1": row["PER"],
+            "Dernier match": row["date"],
+            "Joueur": f"{row['prenom']} {row['nom']}",
+            "Équipe": row["nom_equipe"]
+        }
+
+    perf4_dict = {}
+    for row in perf_res4.data:
+        perf4_dict[row["id_contrat"]] = {
+            "PER_4": row["PER"]
+        }
+
+    perf_res = []
+
+    for id_contrat in contrats_disponibles:
+        if id_contrat not in perf1_dict:
+            continue  # ignore si pas de match récent
+
+        row = {
+            "id_contrat": id_contrat,
+            **perf1_dict[id_contrat],
+            **perf4_dict.get(id_contrat, {"PER_4": "-"})  # si pas de PER_4
+        }
+
+        perf_res.append(row)
+
+
 
 
     # Étape 1 : extraire les id_contrat
-    id_contrats = [row["id_contrat"] for row in perf_res.data]
+    id_contrats = [row["id_contrat"] for row in perf_res]
 
     # Étape 2 : récupérer les valeurs actuelles les plus récentes
     valeurs_res = supabase.table("Valeur_Actuelle") \
@@ -165,15 +240,16 @@ def afficher_joueurs_disponibles(supabase, id_user: int):
 
     effectif = []
     # Étape 4 : enrichir perf_res
-    for row in perf_res.data:
+    for row in perf_res:
         row["valeur_actuelle"] = valeurs_dict.get(row["id_contrat"], "?")
         effectif.append({
             "id_contrat": row["id_contrat"],
-            "Joueur": f"{row['prenom']} {row['nom']}",
-            "Équipe": row["nom_equipe"],
+            "Joueur": f"{row['Joueur']}",
+            "Équipe": row["Équipe"],
             "Valeur actuelle":  row["valeur_actuelle"],
-            "Dernier match": row["date"],
-            "Dernier PER": row["PER"]
+            "Dernier match": row["Dernier match"],
+            "Dernier PER": row["PER_1"],
+            "PER_4": row["PER_4"]
         })
     return effectif
 

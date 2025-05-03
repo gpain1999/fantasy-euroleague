@@ -58,7 +58,6 @@ else:
         st.info(f"Bienvenue, {st.session_state.pseudo} !")
         solde_user = ft.afficher_solde_actuel(supabase, st.session_state.id_user)
         effectif = ft.afficher_effectif(supabase, st.session_state.id_user)
-
         nb_joueurs = len(effectif)
         effectif = sorted(effectif, key=lambda x: x["Valeur actuelle"], reverse=True)
         joueurs_disponibles = ft.afficher_joueurs_disponibles(supabase, st.session_state.id_user)
@@ -92,7 +91,9 @@ else:
         # Affichage des joueurs achetables
         if joueurs_achetables:
             st.markdown("### ✅ Joueurs achetables")
+            
             fst.afficher_tableau(supabase,joueurs_achetables, action_label="Acheter", action_active=active_time)
+
         fst.barre_grise()
         # Affichage des joueurs non disponibles
         if joueurs_non_achetables:
