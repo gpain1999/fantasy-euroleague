@@ -12,6 +12,6 @@ supabase = create_client(url, key)
 
 f.add_deadline(
     supabase,
-    start="2025-05-02T15:00:00",
-    end="2025-05-02T20:00:00"
+    start="2025-05-06T18:45:00",
+    end="2025-05-07T00:00:00"
 )

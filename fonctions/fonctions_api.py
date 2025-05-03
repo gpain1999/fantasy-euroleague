@@ -211,6 +211,38 @@ def is_active_period(supabase) -> bool:
         return False
     return True
 
+def find_deadline(supabase) -> tuple[str, bool]:
+    active = is_active_period(supabase)
+    if active:
+        # Période ACTIVE → on cherche le prochain START > maintenant
+        res = supabase.table("Deadline") \
+            .select("START") \
+            .gt("START", datetime.now(pytz.timezone("Europe/Paris")).isoformat()) \
+            .order("START",desc = False) \
+            .limit(1) \
+            .execute()
+
+        if res.data:
+            prochaine_start = res.data[0]["START"]
+            return prochaine_start, active
+        else:
+            return "Pas de prochaine période connue", active
+
+    else:
+        # Période INACTIVE → on cherche le prochain END > maintenant
+        res = supabase.table("Deadline") \
+            .select("END") \
+            .gt("END", datetime.now(pytz.timezone("Europe/Paris")).isoformat()) \
+            .order("END", desc=False) \
+            .limit(1) \
+            .execute()
+
+        if res.data:
+            prochaine_fin = res.data[0]["END"]
+            return prochaine_fin, active
+        else:
+            return "Pas de fin de période connue", active
+    
 def add_deadline(supabase, start: str, end: str):
     """
     Ajoute une période de deadline dans la table Deadline.
@@ -462,6 +494,46 @@ def finir_contrats_equipe(supabase, id_equipe: str):
             print(f"⚠️ Erreur sur {id_joueur} ({id_equipe}) : {e}")
 
     print(f"✅ Tous les contrats actifs de l’équipe {id_equipe} ont été clôturés.")
+
+def finir_contrat_with_idcontrat(supabase, id_contrat: str):
+    paris_tz = pytz.timezone("Europe/Paris")
+    now = datetime.now(paris_tz).isoformat()
+
+    # Rechercher le contrat actif (END IS NULL)
+    res = supabase.table("Contrat") \
+        .select("id_contrat") \
+        .eq("id_contrat", id_contrat) \
+        .is_("END", None) \
+        .execute()
+
+    if res.data:
+        id_contrat = res.data[0]["id_contrat"]
+
+        # 1. Clôturer le contrat dans Contrat
+        supabase.table("Contrat") \
+            .update({"END": now}) \
+            .eq("id_contrat", id_contrat) \
+            .execute()
+        print(f"✅ Contrat {id_contrat} terminé à {now}")
+
+        # 2. Chercher les utilisateurs possédant ce contrat encore actif
+        possessions = supabase.table("Possession") \
+            .select("id_user") \
+            .eq("id_contrat", id_contrat) \
+            .is_("END", None) \
+            .execute()
+
+        if possessions.data:
+            for poss in possessions.data:
+                id_user = poss["id_user"]
+                try:
+                    vendre_joueur(supabase, id_user, id_contrat)
+                except Exception as e:
+                    print(f"⚠️ Erreur lors de la vente auto pour user {id_user} : {e}")
+        else:
+            print("ℹ️ Aucun utilisateur ne possédait ce joueur.")
+    else:
+        print(f"ℹ️ Aucun contrat actif trouvé pour  {id_contrat}")
 
 def finir_contrat(supabase, id_joueur: str, id_equipe: str):
     id_equipe = id_equipe.upper()

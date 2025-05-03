@@ -87,10 +87,13 @@ def afficher_effectif(supabase, id_user: int):
         .execute()
 
     prix_dict = {}
+    date_achats = {}
     for row in achats_res.data:
         contrat = row["id_contrat"]
         if contrat not in prix_dict:
             prix_dict[contrat] = row["prix"]
+        if contrat not in date_achats:
+            date_achats[contrat] = row["datetime"]
 
     # 5. Construire le tableau final
     effectif = []
@@ -102,6 +105,7 @@ def afficher_effectif(supabase, id_user: int):
             "Équipe": row["nom_equipe"],
             "Valeur actuelle": valeurs_dict.get(id_contrat, "?"),
             "Prix d’achat": prix_dict.get(id_contrat, "?"),
+            "Date d’achat": date_achats.get(id_contrat, "?"),
             "Dernier match": row["date"],
             "Dernier PER": row["PER"]
         })
@@ -172,3 +176,19 @@ def afficher_joueurs_disponibles(supabase, id_user: int):
             "Dernier PER": row["PER"]
         })
     return effectif
+
+
+def afficher_solde_actuel(supabase, id_user: int):
+    # 1. Récupérer le dernier solde pour cet utilisateur
+    solde_res = supabase.table("Banque") \
+        .select("solde") \
+        .eq("id_user", id_user) \
+        .order("datetime", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if solde_res.data:
+        return solde_res.data[0]["solde"]
+    else:
+        print("❌ Aucun solde trouvé pour cet utilisateur.")
+        return None

@@ -1,6 +1,8 @@
 📄 -"Règlement du jeu"
+
 🎯 Objectif du jeu
 Finir premier du classement en fin de saison en obtenant le plus de points. Le score cumule tous les PER réalisés par les joueurs présents dans ton équipe au moment du match.
+
 
 👥 Composition de ton équipe
 Tu peux avoir jusqu’à 10 joueurs maximum dans ton effectif.
@@ -8,6 +10,7 @@ Tu peux avoir jusqu’à 10 joueurs maximum dans ton effectif.
 Il n’y a pas de minimum requis : tu peux jouer avec moins si tu le souhaites.
 
 Tous les joueurs de ton équipe contribuent au score, pas de titulaires/remplaçants.
+
 
 💰 Transferts & budget
 Chaque joueur démarre avec 100 crédits.
@@ -20,6 +23,7 @@ Tu as suffisamment d’argent sur ton solde.
 
 Tu peux vendre un joueur à tout moment entre deux rounds.
 La vente d’un joueur te rapporte sa valeur actuelle.
+
 
 📈 Valeur des joueurs
 La valeur d’un joueur est déterminée par la moyenne de ses 4 dernières performances (PER), sur les matchs qu’il a effectivement joués (hors DNP ou absences).
@@ -34,19 +38,23 @@ Si un PER est négatif, il est ramené à 0 avant d’être inclus dans le calcu
 💸 Usage :
 Cette valeur est utilisée à la fois pour l’achat et pour la revente du joueur.
 
+
 🕑 Fréquence des transferts
 Les changements d’équipe sont autorisés uniquement entre les rounds (entre deux journées de match).
 Il est impossible de modifier ton équipe en cours de round.
+
 
 📊 Classement
 Le classement est mis à jour automatiquement à la fin de chaque journée.
 
 Il est visible par tous les participants.
 
+
 🔍 Visibilité des équipes
 Tu peux consulter les équipes des autres joueurs.
 
 Leur solde de crédits reste privé.
+
 
 ⚙️ Mises à jour automatiques
 Les données (PER, résultats, valeurs…) sont automatiquement mises à jour chaque nuit.
