@@ -2,7 +2,7 @@ import bcrypt
 import sys
 import os
 import streamlit as st
-
+import fonctions.fonctions_api as f
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -46,8 +46,15 @@ def verifier_connexion(supabase,pseudo, mot_de_passe):
     else:
         return None
 
-    
-def creer_compte(pseudo, email, mdp, mdp_confirm):
+def moyenne_glissante_4(valeurs):
+    moyennes = []
+    for i in range(len(valeurs)):
+        fenetre = valeurs[max(0, i-3):i+1]  # de i-3 à i inclus
+        moyenne = round(sum(fenetre) / len(fenetre) * 4,0)/4
+        moyennes.append(moyenne)
+    return moyennes
+
+def creer_compte(supabase,pseudo, email, mdp, mdp_confirm):
     if mdp != mdp_confirm:
         st.error("❌ Les mots de passe ne correspondent pas.")
         return

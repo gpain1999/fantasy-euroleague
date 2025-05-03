@@ -1,7 +1,7 @@
 import pytz
 
 
-
+    
 
 def get_derniere_performance(supabase, id_contrat: int):
     # Étape 1 : récupérer les performances liées à ce contrat
@@ -253,7 +253,6 @@ def afficher_joueurs_disponibles(supabase, id_user: int):
         })
     return effectif
 
-
 def afficher_solde_actuel(supabase, id_user: int):
     # 1. Récupérer le dernier solde pour cet utilisateur
     solde_res = supabase.table("Banque") \
@@ -268,3 +267,43 @@ def afficher_solde_actuel(supabase, id_user: int):
     else:
         print("❌ Aucun solde trouvé pour cet utilisateur.")
         return None
+
+def recuperations_statistiques(supabase, id_contrat: int):
+    # 2. Récupérer les infos depuis vue_tableau_recap
+    perf_res = supabase.table("vue_tableau_recap") \
+        .select("id_contrat, date, PER, nom, prenom, nom_equipe,rang,id_joueur") \
+        .eq("id_contrat", id_contrat) \
+        .execute()
+    
+    # Trier les performances par rang croissant
+    perf_tries = sorted(perf_res.data, key=lambda x: x["rang"])
+
+    # Extraire les listes
+    per_list = []
+    rang_list = []
+    date_list = []
+    print(perf_tries[0])
+    for row in perf_tries:
+        if isinstance(row["PER"], (int, float)):  # filtre valeurs valides
+            per_list.append(row["PER"])
+            rang_list.append(row["rang"])
+            date_list.append(row["date"])
+
+    # Extraire les infos de base (nom joueur, équipe) depuis la 1ère ligne
+    if perf_tries:
+        joueur_info = {
+            "nom": perf_tries[0]["nom"],
+            "prenom": perf_tries[0]["prenom"],
+            "nom_equipe": perf_tries[0]["nom_equipe"],
+            "id_joueur": perf_tries[0]["id_joueur"],
+        }
+        joueur_stat = {
+            "PER": per_list,
+            "Rang": rang_list,
+            "Date": date_list
+        }
+    else:
+        joueur_info = {}
+        joueur_stat = { }
+
+    return joueur_info, joueur_stat  

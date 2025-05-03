@@ -158,3 +158,26 @@ def marketplace(supabase) :
     if joueurs_non_achetables:
         st.markdown("### ❌ Joueurs non disponibles")
         fst.afficher_tableau(supabase,joueurs_non_achetables, action_label="Indisponible", action_active=False)
+
+def centre_de_donnees(supabase):
+    st.title("📊 Centre de données")
+    fst.barre_grise()
+
+    # Récupérer tous les contrats actifs
+    contrats_res = supabase.table("Contrat") \
+        .select("id_contrat") \
+        .is_("END", None) \
+        .execute()
+
+    if not contrats_res.data:
+        st.warning("Aucun contrat actif trouvé.")
+        return
+
+    id_contrats = [row["id_contrat"] for row in contrats_res.data]
+
+    for id_contrat in id_contrats:
+        try:
+            fst.afficher_stats_joueurs(supabase, id_contrat)
+            fst.barre_grise()
+        except Exception as e:
+            st.error(f"❌ Erreur pour contrat {id_contrat} : {e}")

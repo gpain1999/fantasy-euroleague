@@ -51,7 +51,12 @@ if st.session_state.id_user is None:
 # ✅ Si connecté
 
 else:
-    menu = st.sidebar.selectbox("Menu", ["Acceuil","Mon Equipe","Marketplace","Centre de données","Les Prochains Matchs","Classement","Règles du jeu", "Déconnexion"])
+    menu = st.sidebar.selectbox("Menu", ["Acceuil","Mon Equipe","Marketplace","Centre de données","Les Prochains Matchs","Classement","Règles du jeu"])
+    
+    if st.sidebar.button("Déconnexion"):
+        st.session_state.id_user = None
+        st.session_state.pseudo = None
+        st.rerun()
 
     if menu == "Acceuil":
         pass
@@ -63,6 +68,9 @@ else:
     if menu == "Marketplace":
         ps.marketplace(supabase)
 
+    if menu == "Centre de données":
+        ps.centre_de_donnees(supabase)
+    
     if menu == "Les Prochains Matchs":
         ps.prochain_match(supabase)
 
@@ -70,6 +78,6 @@ else:
     elif menu == "Règles du jeu":
         ps.regles_du_jeu()
 
-    elif menu == "Déconnexion":
-        st.session_state.id_user = None
-        st.rerun()
+
+
+
