@@ -21,7 +21,6 @@ def afficher_effectif(supabase, effectif, action_active=True):
         if st.button("💸 Vendre toute l'équipe"):
             for joueur in effectif:
                 f.vendre_joueur(supabase, st.session_state.id_user, joueur["id_contrat"])
-            st.success("Tous les joueurs ont été vendus.")
             st.rerun()
 
     # En-têtes
@@ -47,7 +46,6 @@ def afficher_effectif(supabase, effectif, action_active=True):
         if action_active:
             if cols[7].button("Vendre", key=f"vendre_{joueur['id_contrat']}"):
                 f.vendre_joueur(supabase, st.session_state.id_user, joueur["id_contrat"])
-                st.success(f"{joueur['Joueur']} vendu.")
                 st.rerun()
         else:
             cols[7].button("🚫", key=f"desactiver_{joueur['id_contrat']}", disabled=True)
@@ -77,7 +75,6 @@ def afficher_tableau(supabase,joueurs, action_label="Acheter", action_active=Tru
             if cols[5].button(action_label, key=f"acheter_{joueur['id_contrat']}"):
                 try:
                     f.acheter_joueur(supabase, st.session_state.id_user, joueur["id_contrat"])
-                    st.success(f"{joueur['Joueur']} acheté avec succès.")
                     st.rerun()
                 except Exception as e:
                     st.error(str(e))
