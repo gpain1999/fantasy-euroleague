@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../fonctions'))
 
 import fonctions_standard as f
+import fonctions_tableaux as ft
 from datetime import datetime
 import pytz
 import numpy as np
@@ -108,6 +109,16 @@ def acheter_joueur(supabase, id_user: int, id_contrat: int):
     if is_active_period(supabase) == False:
         raise Exception("⛔ Achat impossible : la période de transfert est actuellement fermée.")
 
+    # Vérifier que le contrat est actif (END IS NULL)
+    contrat_actif = supabase.table("Contrat") \
+        .select("id_contrat") \
+        .eq("id_contrat", id_contrat) \
+        .is_("END", None) \
+        .execute()
+
+    if not contrat_actif.data:
+        raise Exception("⛔ Ce contrat n'est plus actif : le joueur a quitté son équipe/fini sa saison.")
+    
     # 2. Vérifier si le joueur est déjà dans l’équipe (possession active)
     possession_check = supabase.table("Possession") \
         .select("id_possession") \
@@ -329,7 +340,7 @@ def ajouter_user(supabase, pseudo: str, mot_de_passe: str, adresse_mail: str = "
     supabase.table("Banque").insert({
         "id_user": id_user,
         "datetime": now,
-        "solde": 110.0
+        "solde": 100.0
     }).execute()
 
     print(f"✅ Utilisateur {pseudo} ajouté avec id {id_user} et solde initial 110")
@@ -811,5 +822,24 @@ def get_update_match_data(supabase, season):
             continue
     if id_update:
         maj_valeur_actuelle(supabase,id_update)
+        remplir_tableau_histo4(supabase)
     
     nettoyer_calendrier(supabase)
+
+def remplir_tableau_histo4(supabase):
+    # 1. Vider la table (avec filtre large)
+    supabase.table("Tableau_Histo4").delete().gt("id_contrat", 0).execute()
+    print("🧹 Table Tableau_Histo4 vidée.")
+
+    # 2. Récupérer toutes les dernières perfs via la vue
+    res = supabase.table("vue_tableau_recap") \
+        .select("id_contrat, date, PER, rang") \
+        .lte("rang", 4) \
+        .execute()
+
+    if not res.data:
+        print("❌ Aucune donnée à insérer.")
+        return
+
+    supabase.table("Tableau_Histo4").insert(res.data).execute()
+    print(f"✅ {len(res.data)} lignes insérées dans Tableau_Recap.")
