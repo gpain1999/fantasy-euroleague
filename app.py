@@ -54,51 +54,7 @@ else:
     menu = st.sidebar.selectbox("Menu", ["Marketplace","Règles du jeu", "Déconnexion"])
 
     if menu == "Marketplace":
-        st.title("🛒 Marketplace")
-        st.info(f"Bienvenue, {st.session_state.pseudo} !")
-        solde_user = ft.afficher_solde_actuel(supabase, st.session_state.id_user)
-        effectif = ft.afficher_effectif(supabase, st.session_state.id_user)
-        nb_joueurs = len(effectif)
-        effectif = sorted(effectif, key=lambda x: x["Valeur actuelle"], reverse=True)
-        joueurs_disponibles = ft.afficher_joueurs_disponibles(supabase, st.session_state.id_user)
-        joueurs_achetables, joueurs_non_achetables = fs.separer_joueurs_par_disponibilite(
-            joueurs_disponibles, solde_user, nb_joueurs
-        )
-        col1, col2, col3 = st.columns([3, 1, 1])
-        with col1:
-            date_deadline, active_time = f.find_deadline(supabase)
-
-            if active_time:
-                st.success(f"🟢 Marché ouvert jusqu’au **{date_deadline[:10]} à {date_deadline[11:16]}**")
-            else:
-                st.error(f"🔒 Marché fermé — prochaine ouverture le **{date_deadline[:10]} à {date_deadline[11:16]}**")
-
-        with col2:
-            st.metric(label="💰 Solde actuel", value=f"{solde_user:.2f}")
-
-        with col3:
-            st.metric(label="👥 Joueurs dans ton effectif", value=f"{nb_joueurs}/10")
-        fst.barre_grise()
-        st.subheader("🧑‍🤝‍🧑 Ton effectif")
-
-        if effectif:
-            fst.afficher_effectif(supabase,effectif,action_active=True)
-        else:
-            st.info("Aucun joueur dans ton équipe pour le moment.")
-
-        fst.barre_grise()
-        st.subheader("📋 Joueurs disponibles")
-        # Affichage des joueurs achetables
-        if joueurs_achetables:
-            st.markdown("### ✅ Joueurs achetables")
-            
-            fst.afficher_tableau(supabase,joueurs_achetables, action_label="Acheter", action_active=active_time)
-
-        fst.barre_grise()
-        # Affichage des joueurs non disponibles
-        if joueurs_non_achetables:
-            st.markdown("### ❌ Joueurs non disponibles")
-            fst.afficher_tableau(supabase,joueurs_non_achetables, action_label="Indisponible", action_active=False)
+        ps.marketplace(supabase)
 
 
     elif menu == "Règles du jeu":
