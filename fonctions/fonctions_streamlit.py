@@ -169,12 +169,14 @@ def afficher_stats_joueurs(supabase,id_contrat) :
                 f'<p style="font-size:20px;"><strong>{joueur_info["nom_equipe"]}</strong></p>',
                 unsafe_allow_html=True
             )
-
             st.markdown(
                 f'<p style="font-size:30px;">Valeur : <strong>{round(np.mean(joueur_stat["PER"][:4]), 2)}</strong></p>',
                 unsafe_allow_html=True
             )
-
+            st.markdown(
+                f'<p style="font-size:25px;">Moyenne annuelle : <strong>{round(np.mean(joueur_stat["PER"]), 2)}</strong></p>',
+                unsafe_allow_html=True
+            )
             st.markdown(
                 f'<p style="font-size:20px;">Min : <strong>{round(min(moy_gli), 2)}</strong></p>',
                 unsafe_allow_html=True
@@ -184,43 +186,4 @@ def afficher_stats_joueurs(supabase,id_contrat) :
                 unsafe_allow_html=True
             )
         with cols[1]:
-                # Création du graphique avec la nouvelle courbe de moyenne glissante
-            fig = go.Figure()
-
-            for per, date in zip(PER_REVERSED, DATE_REVERSED):
-                couleur = "orange" if per > 0 else "red"  # gris si 0
-
-                # Affiche une barre visible même à 0
-                fig.add_trace(go.Bar(
-                    x=[date],
-                    y=[per if per > 0 else 0.3],  # petite hauteur visible pour les 0
-                    marker_color=couleur,
-                    yaxis="y1",
-                    showlegend=False
-                ))
-
-
-            fig.add_trace(go.Scatter(
-                        x=DATE_REVERSED,
-                        y=moy_gli,
-                        mode="lines+markers",
-                        line=dict(color='grey', width=4, dash="dot"),
-                        yaxis="y1",
-                        showlegend=True,
-                        name=f"Evolution de la valeur de {joueur_info['prenom']} {joueur_info['nom']}"
-                ))
-                
-            fig.update_layout(
-                autosize=True,
-                title = f"PER de {joueur_info['prenom']} {joueur_info['nom']}",
-                xaxis_title="Date",
-                yaxis_title="PER",
-                legend=dict(
-                    orientation="h",  # Layout horizontal
-                    yanchor="top",
-                    y=-0.3,  # Position sous le graphique
-                    xanchor="center",
-                    x=0.5  # Centré horizontalement
-        ))
-            
-            st.plotly_chart(fig, use_container_width=True,static_plot=True)
+            st.image(f"",width=200)
