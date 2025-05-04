@@ -164,7 +164,7 @@ def centre_de_donnees(supabase):
 
     # Récupérer tous les contrats actifs
     contrats_res = supabase.table("Contrat") \
-        .select("id_contrat") \
+        .select("id_contrat, id_equipe") \
         .is_("END", None) \
         .execute()
 
@@ -172,7 +172,50 @@ def centre_de_donnees(supabase):
         st.warning("Aucun contrat actif trouvé.")
         return
 
+    
+    id_equipes = [row["id_equipe"] for row in contrats_res.data]
+
+    equipes_res = supabase.table("Equipe") \
+        .select("id_equipe, nom") \
+        .in_("id_equipe", id_equipes) \
+        .execute()
+    
+    
+    # 1. Récupérer les noms d'équipes
+    equipes = sorted([row["nom"] for row in equipes_res.data])
+
+    cols = st.columns([1,1,1,1])
+    # 2. Interface utilisateur
+    with cols[0]:
+        CODETEAM = st.multiselect("🔍 Filtrer par équipe", options=equipes, key="A")
+
+    # 3. Filtrage des équipes sélectionnées
+    if CODETEAM:
+        # Récupérer les ID des équipes sélectionnées
+        id_equipes_filtrees = [row["id_equipe"] for row in equipes_res.data if row["nom"] in CODETEAM]
+
+        # Filtrer les contrats
+        contrats_res.data = [row for row in contrats_res.data if row["id_equipe"] in id_equipes_filtrees]
+
     id_contrats = [row["id_contrat"] for row in contrats_res.data]
+
+    # 1. Récupérer toutes les lignes correspondantes
+    res = supabase.table("Valeur_Actuelle") \
+        .select("id_contrat, valeur, date") \
+        .in_("id_contrat", id_contrats) \
+        .order("date", desc=True) \
+        .execute()
+
+    # 2. Garder seulement la ligne la plus récente par id_contrat
+    latest_valeurs = {}
+    for row in res.data:
+        idc = row["id_contrat"]
+        if idc not in latest_valeurs:
+            latest_valeurs[idc] = row  # Première occurrence = date la plus récente
+
+    # 3. Trier les lignes conservées par valeur décroissante
+    valeurs_triees = sorted(latest_valeurs.values(), key=lambda x: x["valeur"], reverse=True)
+    id_contrats = [row["id_contrat"] for row in valeurs_triees]
 
     for id_contrat in id_contrats:
         try:

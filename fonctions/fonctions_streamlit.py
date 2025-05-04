@@ -126,7 +126,7 @@ def afficher_tableau(supabase,joueurs, action_label="Acheter", action_active=Tru
 
 
     # En-têtes
-    cols = st.columns([2, 2, 2, 2, 2,2, 1])
+    cols = st.columns([3, 3, 2, 2, 2,2, 2,2])
     cols[0].markdown("**Joueur**")
     cols[1].markdown("**Équipe**")
     cols[2].markdown("**Dernier match**")
@@ -134,9 +134,10 @@ def afficher_tableau(supabase,joueurs, action_label="Acheter", action_active=Tru
     cols[4].markdown("**PER N-4**")
     cols[5].markdown("**Prix actuel**")
     cols[6].markdown("**Action**")
+    cols[7].markdown("**Infos**")
 
     for joueur in joueurs:
-        cols = st.columns([2, 2, 2, 2, 2,2, 1])
+        cols = st.columns([3, 3, 2, 2, 2,2, 2,2])
         cols[0].markdown(str(joueur["Joueur"]))
         cols[1].markdown(str(joueur["Équipe"]))
         cols[2].markdown(str(joueur["Dernier match"])[:10])
@@ -153,6 +154,25 @@ def afficher_tableau(supabase,joueurs, action_label="Acheter", action_active=Tru
                     st.error(str(e))
         else:
             cols[6].button("🚫", key=f"desactiver_{joueur['id_contrat']}", disabled=True)
+        
+        if cols[7].button(f"🔍 Détail", key=f"detail_{joueur['id_contrat']}"):
+            st.session_state["joueur_detail"] = joueur["id_contrat"]
+
+    id_detail = st.session_state.get("joueur_detail")
+    if id_detail:
+        joueur_detail = next((j for j in joueurs if j["id_contrat"] == id_detail), None)
+        if joueur_detail:
+            with st.container():
+                st.markdown("---")
+                st.markdown(f"### 📊 Détail : {joueur_detail['Joueur']} ({joueur_detail['Équipe']})")
+
+                # 👉 Appel de ta fonction personnalisée pour afficher les stats
+                afficher_stats_joueurs(supabase, id_detail)
+
+                # Bouton pour fermer la vue
+                if st.button("Fermer", key="close_detail"):
+                    del st.session_state["joueur_detail"]
+                    st.rerun()
 
 def afficher_stats_joueurs(supabase,id_contrat) :
     joueur_info, joueur_stat = ft.recuperations_statistiques(supabase, id_contrat)
