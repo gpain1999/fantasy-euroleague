@@ -896,12 +896,13 @@ def get_update_match_data(supabase, season):
         remplir_tableau_histo4(supabase)
     
     nettoyer_calendrier(supabase)
-    res = supabase.table("vue_tableau_recap") \
+    contrats_res = supabase.table("Contrat") \
     .select("id_contrat") \
+    .is_("END", None) \
     .execute()
 
     # Extraire les identifiants uniques
-    id_contrats = list({row["id_contrat"] for row in res.data}) if res.data else []
+    id_contrats = [row["id_contrat"] for row in contrats_res.data]
 
     for idc in id_contrats:
         # Appeler la fonction pour chaque identifiant unique

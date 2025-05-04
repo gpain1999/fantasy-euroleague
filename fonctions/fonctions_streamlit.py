@@ -186,4 +186,4 @@ def afficher_stats_joueurs(supabase,id_contrat) :
                 unsafe_allow_html=True
             )
         with cols[1]:
-            st.image(f"",width=200)
+            st.image(f"graphs/diagramme_temporel_{id_contrat}.png",width=800)
