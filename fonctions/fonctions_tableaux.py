@@ -190,6 +190,8 @@ def afficher_joueurs_disponibles(supabase, id_user: int):
         .in_("id_contrat", contrats_disponibles) \
         .eq("rang", 4) \
         .execute()
+    
+
     # Indexé par id_contrat pour jointure rapide
     perf1_dict = {}
     for row in perf_res1.data:

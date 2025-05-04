@@ -914,14 +914,20 @@ def remplir_tableau_histo4(supabase):
     print("🧹 Table Tableau_Histo4 vidée.")
 
     # 2. Récupérer toutes les dernières perfs via la vue
-    res = supabase.table("vue_tableau_recap") \
+    res12 = supabase.table("vue_tableau_recap") \
         .select("id_contrat, date, PER, rang") \
-        .lte("rang", 4) \
+        .in_("rang", [1,2]) \
         .execute()
+    
+    res34 = supabase.table("vue_tableau_recap") \
+        .select("id_contrat, date, PER, rang") \
+        .in_("rang", [3,4]) \
+        .execute()
+    res = res12.data + res34.data
 
-    if not res.data:
+    if not res:
         print("❌ Aucune donnée à insérer.")
         return
 
-    supabase.table("Tableau_Histo4").insert(res.data).execute()
+    supabase.table("Tableau_Histo4").insert(res).execute()
     print(f"✅ {len(res.data)} lignes insérées dans Tableau_Recap.")

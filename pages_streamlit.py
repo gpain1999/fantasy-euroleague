@@ -112,7 +112,6 @@ def marketplace(supabase) :
     effectif = ft.afficher_effectif(supabase, st.session_state.id_user)
     nb_joueurs = len(effectif)
     effectif = sorted(effectif, key=lambda x: x["Valeur actuelle"], reverse=True)
-    
     joueurs_disponibles = ft.afficher_joueurs_disponibles(supabase, st.session_state.id_user)
     joueurs_achetables, joueurs_non_achetables = fs.separer_joueurs_par_disponibilite(
         joueurs_disponibles, solde_user, nb_joueurs
