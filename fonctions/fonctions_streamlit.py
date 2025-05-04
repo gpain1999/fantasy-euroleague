@@ -174,36 +174,43 @@ def afficher_tableau(supabase,joueurs, action_label="Acheter", action_active=Tru
                     del st.session_state["joueur_detail"]
                     st.rerun()
 
-def afficher_stats_joueurs(supabase,id_contrat) :
+def afficher_stats_joueurs(supabase,id_contrat,all = False) :
     joueur_info, joueur_stat = ft.recuperations_statistiques(supabase, id_contrat)
     PER_REVERSED = list(reversed(joueur_stat["PER"]))
     DATE_REVERSED = list(reversed(joueur_stat["Date"]))
     moy_gli = fs.moyenne_glissante_4(PER_REVERSED)
 
     if joueur_info and joueur_stat:
-        cols = st.columns([0.2,0.3,0.5])
-        with cols[0]:
-            st.subheader(f"🧑‍🤝‍🧑 {joueur_info['prenom']} {joueur_info['nom']}")
+        if all :
+            cols = st.columns([0.4,0.6])
+        else :
+            cols = st.columns([0.2,0.3,0.5])
+    with cols[0]:
+        st.subheader(f"🧑‍🤝‍🧑 {joueur_info['prenom']} {joueur_info['nom']}")
 
-            st.markdown(
-                f'<p style="font-size:20px;"><strong>{joueur_info["nom_equipe"]}</strong></p>',
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                f'<p style="font-size:30px;">Valeur : <strong>{round(np.mean(joueur_stat["PER"][:4]), 2)}</strong></p>',
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                f'<p style="font-size:25px;">Moyenne annuelle : <strong>{round(np.mean(joueur_stat["PER"]), 2)}</strong></p>',
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                f'<p style="font-size:20px;">Min : <strong>{round(min(moy_gli), 2)}</strong></p>',
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                f'<p style="font-size:20px;">Max : <strong>{round(max(moy_gli), 2)}</strong></p>',
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            f'<p style="font-size:20px;">🏀 <strong>{joueur_info["nom_equipe"]}</strong></p>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<p style="font-size:30px;">💰 Valeur : <strong>{round(np.mean(joueur_stat["PER"][:4]), 2)}</strong></p>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<p style="font-size:25px;">📊 Moyenne annuelle : <strong>{round(np.mean(joueur_stat["PER"]), 2)}</strong></p>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<p style="font-size:20px;">📉 Valeur Min  : <strong>{round(min(moy_gli), 2)}</strong></p>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<p style="font-size:20px;">📈 Valeur Max  : <strong>{round(max(moy_gli), 2)}</strong></p>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<p style="font-size:20px;">📅 Dernier Match : <strong>{joueur_stat["Date"][0][:10]}</strong></p>',
+            unsafe_allow_html=True
+        )
         with cols[1]:
-            st.image(f"graphs/diagramme_temporel_{id_contrat}.png",width=800)
+            st.image(f"graphs/diagramme_temporel_{id_contrat}.png",width=1000)

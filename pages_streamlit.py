@@ -215,12 +215,16 @@ def centre_de_donnees(supabase):
 
     # 3. Trier les lignes conservées par valeur décroissante
     valeurs_triees = sorted(latest_valeurs.values(), key=lambda x: x["valeur"], reverse=True)
+    
     id_contrats = [row["id_contrat"] for row in valeurs_triees]
 
-    for id_contrat in id_contrats:
+    cols = st.columns(2)  # Deux colonnes côte à côte
+
+    for idx, id_contrat in enumerate(id_contrats):
         try:
-            fst.afficher_stats_joueurs(supabase, id_contrat)
-            fst.barre_grise()
+            with cols[idx % 2]:  # alterne entre col[0] et col[1]
+                fst.afficher_stats_joueurs(supabase, id_contrat,True)
+                fst.barre_grise()
         except Exception as e:
             st.error(f"❌ Erreur pour contrat {id_contrat} : {e}")
 
