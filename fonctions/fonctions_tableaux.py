@@ -1,7 +1,9 @@
 import pytz
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from datetime import datetime
+import fonctions_standard as fs
 
-
-    
 
 def get_derniere_performance(supabase, id_contrat: int):
     # Étape 1 : récupérer les performances liées à ce contrat
@@ -282,7 +284,6 @@ def recuperations_statistiques(supabase, id_contrat: int):
     per_list = []
     rang_list = []
     date_list = []
-    print(perf_tries[0])
     for row in perf_tries:
         if isinstance(row["PER"], (int, float)):  # filtre valeurs valides
             per_list.append(row["PER"])
@@ -307,3 +308,62 @@ def recuperations_statistiques(supabase, id_contrat: int):
         joueur_stat = { }
 
     return joueur_info, joueur_stat  
+
+
+def create_pnj_perf(supabase,idc) : 
+    joueur_info, joueur_stat = recuperations_statistiques(supabase, idc)
+
+    y1 = list(reversed(joueur_stat["PER"]))
+    y2 = fs.moyenne_glissante_4(y1)
+    x = list(reversed(joueur_stat["Date"]))
+    x_dates = [datetime.strptime(date[:10], "%Y-%m-%d") for date in x]
+
+    # Préparation des couleurs et hauteurs
+    bar_colors = ['red' if v == 0 else 'orange' for v in y1]
+    bar_heights = [0.3 if v == 0 else v for v in y1]
+
+    # Création du diagramme
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(
+        x_dates, bar_heights,
+        color=bar_colors,
+        edgecolor='black',
+        width=2
+    )
+
+    # Ajout des annotations "0" au-dessus des barres rouges
+    for i, v in enumerate(y1):
+        if v == 0:
+            plt.text(
+                x_dates[i], 0.35, "0",
+                ha='center', va='bottom',
+                fontsize=9, color='black'
+            )
+
+    # Ajout de la courbe y2 (en gris)
+    plt.plot(
+        x_dates, y2,
+        color='gray',
+        marker='o',
+        linestyle='--',
+        linewidth=2,
+        label='Valeur'
+    )
+
+    # Formatage des dates : mois/année
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+    plt.xticks(rotation=45)
+
+    # Grille horizontale tous les 3 en PER
+    max_val = max(max(y1), max(y2), 6)
+    plt.yticks(range(0, int(max_val) + 4, 3))
+    plt.grid(axis='y')
+
+    plt.ylabel("PER")
+    plt.title(f"Evolution du PER et de la valeur de {joueur_info['prenom']} {joueur_info['nom']}")
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(f"graphs/diagramme_temporel_{idc}.png")
+    plt.close()

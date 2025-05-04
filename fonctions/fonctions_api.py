@@ -888,7 +888,6 @@ def get_update_match_data(supabase, season):
                 except Exception as e:
                     print(f"❌ Erreur pour le joueur {id_joueur} ({nom} {prenom}) : {e}")
                     continue
-            ok_one_time = True
         except Exception as e:
             print(f"\n❌ Erreur dans game_code {game_code} → {e}")
             continue
@@ -897,6 +896,16 @@ def get_update_match_data(supabase, season):
         remplir_tableau_histo4(supabase)
     
     nettoyer_calendrier(supabase)
+    res = supabase.table("vue_tableau_recap") \
+    .select("id_contrat") \
+    .execute()
+
+    # Extraire les identifiants uniques
+    id_contrats = list({row["id_contrat"] for row in res.data}) if res.data else []
+
+    for idc in id_contrats:
+        # Appeler la fonction pour chaque identifiant unique
+        ft.create_pnj_perf(supabase,idc)
 
 def remplir_tableau_histo4(supabase):
     # 1. Vider la table (avec filtre large)

@@ -33,7 +33,7 @@ def afficher_effectif(supabase, effectif, action_active=True):
             st.rerun()
 
     # En-têtes
-    cols = st.columns([2, 2, 2, 2, 2, 2, 2,2, 1,1])
+    cols = st.columns([2.5, 2.5, 2, 2, 2, 2, 2,2, 2,2])
     cols[0].markdown("**Joueur**")
     cols[1].markdown("**Équipe**")
     cols[2].markdown("**Date d’achat**")
@@ -46,7 +46,7 @@ def afficher_effectif(supabase, effectif, action_active=True):
     cols[9].markdown("**Infos**")
 
     for joueur in effectif:
-        cols = st.columns([2, 2, 2, 2, 2, 2, 2,2, 1,1])
+        cols = st.columns([2.5, 2.5, 2, 2, 2, 2, 2,2, 2,2])
         cols[0].markdown(joueur["Joueur"])
         cols[1].markdown(joueur["Équipe"])
         cols[2].markdown(f"{str(joueur['Date d’achat'])[:10]} {str(joueur['Date d’achat'])[11:16]}")

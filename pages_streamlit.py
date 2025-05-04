@@ -181,3 +181,9 @@ def centre_de_donnees(supabase):
             fst.barre_grise()
         except Exception as e:
             st.error(f"❌ Erreur pour contrat {id_contrat} : {e}")
+
+def mon_equipe(supabase) :
+    pass
+
+def mes_actions(supabase) :
+    pass
