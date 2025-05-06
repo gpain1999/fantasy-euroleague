@@ -776,6 +776,7 @@ def nettoyer_calendrier(supabase):
 
     # 2. Pour chaque triplet, supprimer s’il existe dans Calendrier
     for match in matchs.data:
+        print(match)
         id_match = match["id_match"]
         season = match["season"]
         round_ = match["round"]
@@ -930,4 +931,4 @@ def remplir_tableau_histo4(supabase):
         return
 
     supabase.table("Tableau_Histo4").insert(res).execute()
-    print(f"✅ {len(res.data)} lignes insérées dans Tableau_Recap.")
+    print(f"✅ {len(res)} lignes insérées dans Tableau_Recap.")
